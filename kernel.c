@@ -304,16 +304,6 @@ void queue_str_task(const char *str, int delay)
 	}
 }
 
-void queue_str_task1()
-{
-	queue_str_task("Hello 1\n", 200);
-}
-
-void queue_str_task2()
-{
-	queue_str_task("Hello 2\n", 50);
-}
-
 void serial_readwrite_task()
 {
 	int fdout, fdin;
@@ -358,6 +348,163 @@ void serial_readwrite_task()
 	}
 }
 
+#define CMD_HELLO 1
+#define CMD_ECHO  2
+#define CMD_PS    3
+#define CMD_NONE  100
+void NewLine()
+{
+  char str[3];
+  int fdout;
+  fdout = mq_open("/tmp/mqueue/out", 0);
+  str[0] = 0x0A;
+  str[1] = 0x0D;
+  str[2] = '\0';
+  write(fdout,str,3);
+
+}
+char CMD_Analysis(char *buf)
+{
+ char res = 0;
+ //Check "hello" CMD		
+ res = strcmp(buf,"hello"); if(res==0) return CMD_HELLO;
+ //Check "echo" CMD		
+ res = strcmp(buf,"echo");  if(res==0) return CMD_ECHO;
+ //Check "ps" CMD		
+ res = strcmp(buf,"help");  if(res==0) return CMD_PS;
+
+ return CMD_NONE;
+} 
+void response_none()
+{
+  char hello_str[37]="NO such command, please check again.\0";
+  int fdout;
+
+  fdout = mq_open("/tmp/mqueue/out", 0);
+  //print out the welcome string
+  NewLine();
+  write(fdout,hello_str,37);	
+}
+
+void response_ps()
+{
+
+}
+
+void response_hello()
+{
+  char hello_str[25]="Hello! This is Lab19-HW1\0";
+  int fdout;
+
+  fdout = mq_open("/tmp/mqueue/out", 0);
+  //print out the welcome string
+  NewLine();
+  write(fdout,hello_str,25);	
+}
+
+void response_echo()
+{
+  char hello_str[42]="Please key in and press enter to finish:\0";
+  int fdout,fdin;
+  char str[100];
+  char str_tmp[2];
+  char ch;
+  int curr_char;
+  int done;
+
+  str_tmp[1] = '\0';
+  fdout = mq_open("/tmp/mqueue/out", 0);
+  fdin = open("/dev/tty0/in", 0);
+  //print out the welcome string
+  NewLine();
+  write(fdout,hello_str,42);
+  //waiting for echo message
+		curr_char = 0;
+		done = 0;
+		do {
+			/* Receive a byte from the RS232 port (this call will
+			 * block). */
+			read(fdin, &ch, 1);	
+			if((ch!=0x0A)&&(ch!=0x0D))
+			{
+				str_tmp[0] = ch;
+				write(fdout, str_tmp,2);
+			}
+			/* If the byte is an end-of-line type character, then
+			 * finish the string and inidcate we are done. Also, the core
+			 * has to show the response depends on the input string.
+			 */
+			if (curr_char >= 98 || (ch ==0x0A) || (ch ==0x0D)) {
+				done = -1;
+				str[curr_char] ='\0'; curr_char++;
+			}
+			/* Otherwise, add the character to the
+			* response string. */
+			else {
+				str[curr_char++] = ch;
+			}
+		} while (!done);  
+		if(curr_char>1)	NewLine();
+		write(fdout, str, curr_char);  
+}
+
+void lab19_shell_task()
+{
+	int fdout, fdin;
+	char str[100];
+	char str_resp[20];
+	char ch;
+	char res = 0;
+	int curr_char;
+	int done;
+	char str_tmp[2];
+
+	fdout = mq_open("/tmp/mqueue/out", 0);
+	fdin = open("/dev/tty0/in", 0);
+	str_tmp[1] = '\0';
+	/* Lab19_Shell Message */
+        memcpy(str_resp,"Lab19_Shell:\0",13);
+	while (1) {	
+		write(fdout,str_resp,13);	
+		curr_char = 0;
+		done = 0;
+		do {
+			/*Get a byte from USART2.
+			 *If the byte means CR or LF then skip it*/
+			read(fdin, &ch, 1);	
+			if((ch!=0x0A)&&(ch!=0x0D))
+			{
+				str_tmp[0] = ch;
+				write(fdout, str_tmp,2);
+			}
+			/* If the byte is an end-of-line type character, then
+			 * finish the string and inidcate we are done. Also, the core
+			 * has to show the response depends on the input string.
+			 */
+			if (curr_char >= 98 || (ch==0x0A) || (ch==0x0D)) {
+				done = -1;
+			    	res = CMD_Analysis(str);
+				switch(res){
+					case CMD_HELLO:	response_hello();
+					break;
+					case CMD_PS:	response_ps();
+					break;
+					case CMD_ECHO:	response_echo();
+					break;
+					default: response_none();					break;									
+				}
+				str[curr_char] ='\0'; curr_char++;
+			}
+			/* Otherwise, add the character to the
+			* response string. */
+			else {
+				str[curr_char++] = ch;
+			}
+		} while (!done);
+		NewLine();
+	}
+}
+
 void first()
 {
 	setpriority(0, 0);
@@ -366,10 +513,7 @@ void first()
 	if (!fork()) setpriority(0, 0), serialout(USART2, USART2_IRQn);
 	if (!fork()) setpriority(0, 0), serialin(USART2, USART2_IRQn);
 	if (!fork()) rs232_xmit_msg_task();
-	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task1();
-	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task2();
-	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), serial_readwrite_task();
-
+	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), lab19_shell_task();
 	setpriority(0, PRIORITY_LIMIT);
 
 	while(1);
