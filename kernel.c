@@ -342,19 +342,14 @@ char CMD_Analysis(char *buf)
 } 
 void response_none()
 {
-  char hello_str[37]="NO such command, please check again.\0";
-  int fdout;
-
-  fdout = mq_open("/tmp/mqueue/out", 0);
-  //print out the welcome string
-  NewLine();
-  write(fdout,hello_str,37);	
+  //print out the N/a string
+  NewLine();	
+  my_printf("NO such command, please check again.");
 }
 
 void response_ps()
 {
  int task_cnt = 0;
- char welcome_str[23] = "Process Status List:\r\n\0";
  
 // for(task_cnt=0; task_cnt<*(g_task_info.task_amount); task_cnt++){
  
@@ -364,18 +359,13 @@ void response_ps()
 
 void response_hello()
 {
-  char hello_str[25]="Hello! This is Lab19-HW1\0";
-  int fdout;
-
-  fdout = mq_open("/tmp/mqueue/out", 0);
   //print out the welcome string
   NewLine();
-  write(fdout,hello_str,25);	
+  my_printf("Hello, this is Lab19-HW1");
 }
 
 void response_echo()
 {
-  char hello_str[42]="Please key in and press enter to finish:\0";
   int fdout,fdin;
   char str[100];
   char str_tmp[2];
@@ -388,7 +378,7 @@ void response_echo()
   fdin = open("/dev/tty0/in", 0);
   //print out the welcome string
   NewLine();
-  write(fdout,hello_str,42);
+  my_printf("Please key in and press enter to finish:");
   //waiting for echo message
 		curr_char = 0;
 		done = 0;
