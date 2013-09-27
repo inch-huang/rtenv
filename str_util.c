@@ -1,3 +1,7 @@
+/*These functions are programmed by author zzz0072 in GitHub
+ *see: https://github.com/zzz0072/rtenv 
+ */
+
 #include <stdarg.h> /* For variable list */
 #include "str_util.h"
 #include "stm32f10x.h"

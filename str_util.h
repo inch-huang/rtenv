@@ -1,3 +1,6 @@
+/*These functions are programmed by author zzz0072 in GitHub
+ *see: https://github.com/zzz0072/rtenv 
+ */
 #ifndef UTIL_H_20130921
 #define UTIL_H_20130921
 #include <stddef.h>
